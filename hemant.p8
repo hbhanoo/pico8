@@ -14,7 +14,7 @@ global_id=0
    box = {x1 = 0, x2 = 8, y1 = 0, y2 = 8},
    dx = 0,
    dy = 0.5,
-   dr = 50,
+   dr = 40,
    bullet = "tie_bullet",
  }
  info.ship = {
@@ -29,10 +29,10 @@ global_id=0
  info.bomb = {
    type = "bomb",
    sp = 17,  -- sprite
-   box = {x1 = -4, x2 = 6, y1 = -3, y2 = 7},
+   box = {x1 = -24, x2 = 32, y1 = -8, y2 = 8},
    sx = 0,   -- sfx
    dx = 0,   -- speed x
-   dy = -2,  -- speed y
+   dy = -1,  -- speed y
  }
  info.bullet = {
    type = "bullet",
@@ -58,14 +58,13 @@ function _init()
  bullets = {}
  enemies = {}
  dead_enemies = {}
- bound = {x1 = 0, x2 = 128,
- y1 = 0, y2 = 120}
+ bound = {x1 = 2, x2 = 128, y1 = 0, y2 = 120}
  ammos = {}
  ammos[0] = {
   type = "bomb",
   n = 5,    -- qty
   t = 0,    -- last time fired
-  dr = 100,   -- replenish rate
+  dr = 200,   -- replenish rate
   df = 30,  -- fire rate
   mx = 10,  -- max
  }
@@ -95,7 +94,7 @@ end
 
 function create_enemy()
  if ((t % info.tie.dr) == 0) then
-  e = spawn("tie", { x=rndi(100), y=0 })
+  e = spawn("tie", { x=rndi(100), y=1 })
   add(enemies, e)
  end
 end
@@ -118,6 +117,17 @@ function continue_exploding()
   end
 end
 
+function killed(b, tbl)
+ for de in all(tbl) do
+  sfx(2)
+  score.good += 1
+  info[de.type].dr -= 1
+  info[de.type].dy += 0.1
+  del(enemies, de)
+  del(bullets, b)
+ end
+end
+
 
 function _update()
  t += 1
@@ -131,23 +141,19 @@ function _update()
   end
   local newly_died = collide_any(b, enemies)
   if next(newly_died) == nil then
-  else
-   for de in all(newly_died) do
-    sfx(2)
-    score.good += 1
-    del(enemies, de)
-    del(bullets, b)
-   end
-  end
+  else killed(b, newly_died) end
   merge(dead_enemies, newly_died)
  end
 
  continue_exploding()
 
  for e in all(enemies) do
+  printh(e.id .. ": [" .. e.x .. ", " .. e.y .. "]")
   moveobj(e)
   if not in_bound(e, bound) then
     score.bad += 1
+    info[e.type].dr += 1
+    info[e.type].dy -= 0.3
     del(enemies, e)
   end
  end
@@ -156,10 +162,22 @@ function _update()
 -- printh("dying enemies: " .. showids(dead_enemies))
 
  -- buttons
- if btn(⬆️) then ship.y-=1 end
- if btn(⬇️) then ship.y+=1 end
- if btn(⬅️) then ship.x-=1 end
- if btn(➡️) then ship.x+=1 end
+ if btn(⬆️) then
+  ship.dy = min(0, ship.dy) - 0.1
+  ship.y+=ship.dy
+ end
+ if btn(⬇️) then
+  ship.dy = max(0, ship.dy) + 0.1
+  ship.y+=ship.dy
+ end
+ if btn(⬅️) then
+  ship.dx = min(0, ship.dx) - 0.1
+  ship.x += ship.dx
+ end
+ if btn(➡️) then
+  ship.dx = max(0, ship.dx) + 0.1
+  ship.x+=ship.dx
+ end
  constrain(ship, bound)
 
  if btn(🅾️) then fire(0) end
@@ -174,13 +192,13 @@ function _draw()
  print(ammos[1].n .. "/" .. ammos[1].mx, 90,120, 7)
  spr(ship.sp, ship.x, ship.y)
  for b in all(bullets) do
-  spr(b.sp, b.x, b.y)
+  spr(b.sp, flr(b.x), flr(b.y))
  end
  for e in all(enemies) do
-  spr(e.sp, e.x, e.y)
+  spr(e.sp, flr(e.x), flr(e.y))
  end
  for de in all(dead_enemies) do
-  spr(de.sp, de.x, de.y)
+  spr(de.sp, flr(de.x), flr(de.y))
  end
 
 end
