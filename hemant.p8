@@ -42,12 +42,17 @@ global_id=0
    dx = 0,
    dy = -3,
  }
+ info.explosion = {
+  type = "explosion",
+  sp = 4,
+  sps = {4, 5, 6, 7},
+  spi = 0
+ }
 
 function _init()
  ship = {
   type = "ship",
   sp = 1, -- current sprite
-  spn = 2, -- how many sprites to animate
   sps = {1,2}, -- which sprites to animate
   animt = 6,  -- total time over which to animate
   x = 60,
@@ -57,7 +62,7 @@ function _init()
  }
  bullets = {}
  enemies = {}
- dead_enemies = {}
+ explosions = {}
  bound = {x1 = 2, x2 = 128, y1 = 0, y2 = 120}
  ammos = {}
  ammos[0] = {
@@ -101,14 +106,13 @@ end
 
 function continue_exploding()
   local to_kill = {}
-  -- printh("dead_enemies (u):" .. #dead_enemies)
-  for e in all(dead_enemies) do
-  --   printh(t .. "|" .. e.id .. ": " .. e.sp)
-   if e.sp >= 8 then
-      add(to_kill, e)
+  for e in all(explosions) do
+   if e.spi >= #e.sps then
+      del(explosions, e)
    else
       if (t%3) == 0 then
-       e.sp = e.sp + 1
+       e.spi = e.spi + 1
+       e.sp = e.sps[e.spi]
       end
    end
   end
@@ -118,6 +122,7 @@ function continue_exploding()
 end
 
 function killed(b, tbl)
+ local expl = {}
  for de in all(tbl) do
   sfx(2)
   score.good += 1
@@ -125,14 +130,15 @@ function killed(b, tbl)
   info[de.type].dy += 0.1
   del(enemies, de)
   del(bullets, b)
+  add(expl, spawn("explosion", { x = de.x, y = de.y }))
  end
+ return expl
 end
 
 
 function _update()
  t += 1
  animate(ship)
-
  replenish()
  for b in all(bullets) do
   moveobj(b)
@@ -141,8 +147,7 @@ function _update()
   end
   local newly_died = collide_any(b, enemies)
   if next(newly_died) == nil then
-  else killed(b, newly_died) end
-  merge(dead_enemies, newly_died)
+  else merge(explosions, killed(b, newly_died)) end
  end
 
  continue_exploding()
@@ -152,14 +157,12 @@ function _update()
   moveobj(e)
   if not in_bound(e, bound) then
     score.bad += 1
-    info[e.type].dr += 1
-    info[e.type].dy -= 0.3
+    info[e.type].dr = max(info[e.type].dr + 1, 50)
+    info[e.type].dy = min(info[e.type].dy - 0.3, 0.5)
     del(enemies, e)
   end
  end
 
--- printh("enemies: " .. showids(enemies))
--- printh("dying enemies: " .. showids(dead_enemies))
 
  -- buttons
  if btn(⬆️) then
@@ -197,7 +200,7 @@ function _draw()
  for e in all(enemies) do
   spr(e.sp, flr(e.x), flr(e.y))
  end
- for de in all(dead_enemies) do
+ for de in all(explosions) do
   spr(de.sp, flr(de.x), flr(de.y))
  end
 
@@ -232,7 +235,7 @@ end
 function animate(o)
  if o.animt == nil then return end -- not animatable
  local k = t % o.animt
- local i = flr(o.spn * k / o.animt)
+ local i = flr(#o.sps * k / o.animt)
  o.sp = o.sps[i + 1]
 end
 
