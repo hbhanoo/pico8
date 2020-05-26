@@ -3,7 +3,9 @@ version 27
 __lua__
 
 t=0
+global_id=0
  info = {}
+ score = {good=0, bad=0}
  info.tie = {
    type = "tie",
    sp = 3,
@@ -27,7 +29,7 @@ t=0
  info.bomb = {
    type = "bomb",
    sp = 17,  -- sprite
-   box = {x1 = 0, x2 = 2, y1 = 0, y2 = 3},
+   box = {x1 = -4, x2 = 6, y1 = -3, y2 = 7},
    sx = 0,   -- sfx
    dx = 0,   -- speed x
    dy = -2,  -- speed y
@@ -35,8 +37,8 @@ t=0
  info.bullet = {
    type = "bullet",
    sp = 18,
+   sx = 1,   -- sfx
    box = {x1 = 7, x2 = 7, y1 = 0, y2 = 2},
-   sx = 1,
    dx = 0,
    dy = -3,
  }
@@ -55,6 +57,7 @@ function _init()
  }
  bullets = {}
  enemies = {}
+ dead_enemies = {}
  bound = {x1 = 0, x2 = 128,
  y1 = 0, y2 = 120}
  ammos = {}
@@ -88,7 +91,7 @@ function fire(k)
    y = ship.y,
  })
  add(bullets, b)
- sfx(a.sx, a)
+ sfx(b.sx, a)
 end
 
 -- utils
@@ -116,6 +119,11 @@ function constrain(o, b)
  if o.y + o.h > b.y2 then o.y = b.y2 - o.h end
 end
 
+function in_bound(o, b)
+ return (o.x > b.x1 and o.x < b.x2 and
+         o.y > b.y1 and o.y < b.y2)
+end
+
 function moveobj(b)
   b.x += b.dx
   b.y += b.dy
@@ -123,6 +131,8 @@ end
 
 function spawn(name, initial)
  local e = copy(info[name])
+ global_id += 1
+ initial.id = global_id
  merge(e, initial)
  return e
 end
@@ -174,29 +184,60 @@ function collide_any(obj, objects)
  return collisions
 end
 
+function explode(de)
+ -- sfx(2)
+end
+
+
+function continue_exploding()
+  local to_kill = {}
+  -- printh("dead_enemies (u):" .. #dead_enemies)
+  for e in all(dead_enemies) do
+   printh(t .. "|" .. e.id .. ": " .. e.sp)
+   if e.sp >= 8 then
+      add(to_kill, e)
+   else
+      if (t%3) == 0 then
+       e.sp = e.sp + 1
+      end
+   end
+  end
+  for e in all(to_kill) do
+   del(dead_enemies, e)
+  end
+end
+
 
 function _update()
  t += 1
  animate(ship)
+
  replenish()
  for b in all(bullets) do
   moveobj(b)
-  if b.x < 0 or b.x > 128 or
-     b.y < 0 or b.y > 128 then
+  if not in_bound(b, bound) then
    del(bullets, b)
   end
- dead_enemies = collide_any(b, enemies)
- if next(dead_enemies) == nil then
- else
-  for de in all(dead_enemies) do
-   del(enemies, de)
+  local newly_died = collide_any(b, enemies)
+  if next(newly_died) == nil then
+  else
+   for de in all(newly_died) do
+    -- explode(de)
+    score.good += 1
+    del(enemies, de)
+   end
   end
-  del(bullets, b)
+  merge(dead_enemies, newly_died)
  end
- end
+
+ continue_exploding()
 
  for e in all(enemies) do
   moveobj(e)
+  if not in_bound(e, bound) then
+    score.bad += 1
+    del(enemies, e)
+  end
  end
 
  -- buttons
@@ -212,8 +253,10 @@ end
 
 function _draw()
  cls()
+ print(score.good or 0, 40, 120, 6)
+ print(score.bad  or 0, 60, 120, 8)
  print(ammos[0].n .. "/" .. ammos[0].mx, 0,120, 7)
- print(ammos[1].n .. "/" .. ammos[1].mx, 80,120, 7)
+ print(ammos[1].n .. "/" .. ammos[1].mx, 90,120, 7)
  spr(ship.sp, ship.x, ship.y)
  for b in all(bullets) do
   spr(b.sp, b.x, b.y)
@@ -221,6 +264,12 @@ function _draw()
  for e in all(enemies) do
   spr(e.sp, e.x, e.y)
  end
+ -- printh("dead_enemies: (d):" .. #dead_enemies)
+ for de in all(dead_enemies) do
+  printh(t .. "| => " .. e.id .. ": " .. e.sp)
+  spr(e.sp, e.x, e.y)
+ end
+
 end
 __gfx__
 00000000000060000000600050000005500000a5a8800005080a08a00a0000000000000000000000000000000000000000000000000000000000000000000000
@@ -250,4 +299,4 @@ __gfx__
 __sfx__
 0005000002610046200c6301264017650196701b6701b6701a660166400e6300763004620006200f6000a60007600046000060000600006000060000600006000060000600006000060000600016000060000000
 000101000000000010160100161028020006202802028020016202402021010006201b03000630120301004009040030700007000070000700007000000000000000000000000000000000000000000000000000
-000100001435014650186501d6501f6502365027650296502b6502c6502e6502e6502f6502c6502c6502a650296502865026650216501b65017650146501365011650106500c6500865004650026500000000000
+000500001b65003650206502065022650286502d6503065032650336503465035650326502d650236501965013650106000d6000b6000660002600006001960013600116000f6000f6000d6000a6000860005600
