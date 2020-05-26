@@ -3,6 +3,8 @@ version 27
 __lua__
 
 t=0
+dx = 0
+dy = 0.25
 global_id=0
  info = {}
  score = {good=0, bad=0}
@@ -19,12 +21,11 @@ global_id=0
  }
  info.ship = {
    type = "ship",
-   spn = 2, -- how many sprites to animate
    sps = {1,2}, -- which sprites to animate
    animt = 6,  -- total time over which to animate
    x = 60,
    y = 60,
-   box = {x1 = 0, x2 = 7, y1 = 0, y2 = 76},
+   box = {x1 = 0, x2 = 12, y1 = 0, y2 = 10},
  }
  info.bomb = {
    type = "bomb",
@@ -48,21 +49,21 @@ global_id=0
   sps = {4, 5, 6, 7},
   spi = 0
  }
+ info.star = {
+  type = "star",
+  dr = 3,
+  c = 5,
+ }
 
 function _init()
- ship = {
-  type = "ship",
-  sp = 1, -- current sprite
-  sps = {1,2}, -- which sprites to animate
-  animt = 6,  -- total time over which to animate
-  x = 60,
-  y = 60,
-  w = 8,
-  h = 8
- }
+ ship = spawn("ship", { x = 60,  y = 60 })
  bullets = {}
  enemies = {}
  explosions = {}
+ stars = {}
+ for i=1,100 do
+  add(stars, spawn("star", {x=rndi(180), y=rndi(180)}))
+ end
  bound = {x1 = 2, x2 = 128, y1 = 0, y2 = 120}
  ammos = {}
  ammos[0] = {
@@ -78,7 +79,7 @@ function _init()
   n = 10,
   t = 0,
   dr = 25,
-  df = 3,
+  df = 5,
   mx = 20,
  }
 end
@@ -99,7 +100,7 @@ end
 
 function create_enemy()
  if ((t % info.tie.dr) == 0) then
-  e = spawn("tie", { x=rndi(100), y=1 })
+  e = spawn("tie", { x=rndi(100), y=20 })
   add(enemies, e)
  end
 end
@@ -153,7 +154,7 @@ function _update()
  continue_exploding()
 
  for e in all(enemies) do
-  printh(e.id .. ": [" .. e.x .. ", " .. e.y .. "]")
+  -- printh(e.id .. ": [" .. e.x .. ", " .. e.y .. "]")
   moveobj(e)
   if not in_bound(e, bound) then
     score.bad += 1
@@ -163,6 +164,15 @@ function _update()
   end
  end
 
+ if ((t % info.star.dr) == 0) then
+  add(stars, spawn("star", {x = rndi(180), y = rndi(3) }))
+ end
+
+ for s in all(stars) do
+  s.y += dy
+  s.x += dx
+  if not in_bound(s, bound) then del(stars, s) end
+ end
 
  -- buttons
  if btn(⬆️) then
@@ -189,11 +199,9 @@ end
 
 function _draw()
  cls()
- print(score.good or 0, 40, 120, 6)
- print(score.bad  or 0, 60, 120, 8)
- print(ammos[0].n .. "/" .. ammos[0].mx, 0,120, 7)
- print(ammos[1].n .. "/" .. ammos[1].mx, 90,120, 7)
- spr(ship.sp, ship.x, ship.y)
+ for s in all(stars) do
+  pset(s.x, s.y, s.c)
+ end
  for b in all(bullets) do
   spr(b.sp, flr(b.x), flr(b.y))
  end
@@ -203,8 +211,13 @@ function _draw()
  for de in all(explosions) do
   spr(de.sp, flr(de.x), flr(de.y))
  end
-
+ print(score.good or 0, 40, 120, 6)
+ print(score.bad  or 0, 60, 120, 8)
+ print(ammos[0].n .. "/" .. ammos[0].mx, 0,120, 7)
+ print(ammos[1].n .. "/" .. ammos[1].mx, 90,120, 7)
+ spr(ship.sp, ship.x, ship.y)
 end
+
 -->8
 -- PAGE 1
 -- a = 0 or 1
@@ -240,10 +253,10 @@ function animate(o)
 end
 
 function constrain(o, b)
- if o.x < b.x1 then o.x = b.x1 end
- if o.x + o.w > b.x2 then o.x = b.x2 - o.w end
- if o.y < b.y1 then o.y = b.y1 end
- if o.y + o.h > b.y2 then o.y = b.y2 - o.h end
+ if o.x + o.box.x1 < b.x1 then o.x = b.x1 + o.box.x1 end
+ if o.x + o.box.x2 > b.x2 then o.x = b.x2 - o.box.x2 end
+ if o.y + o.box.y1 < b.y1 then o.y = b.y1 + o.box.y1 end
+ if o.y + o.box.y2 > b.y2 then o.y = b.y2 - o.box.y2 end
 end
 
 function in_bound(o, b)
