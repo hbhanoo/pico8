@@ -79,6 +79,113 @@ function _init()
  }
 end
 
+
+function replenish()
+ create_enemy()
+
+ -- replenish ammo
+ for k,a in pairs(ammos) do
+--  local a = ammos[k]
+  if ((t % a.dr) == 0 and a.n < a.mx) then
+    a.n += 1
+  end
+ end
+end
+
+
+function create_enemy()
+ if ((t % info.tie.dr) == 0) then
+  e = spawn("tie", { x=rndi(100), y=0 })
+  add(enemies, e)
+ end
+end
+
+function continue_exploding()
+  local to_kill = {}
+  -- printh("dead_enemies (u):" .. #dead_enemies)
+  for e in all(dead_enemies) do
+  --   printh(t .. "|" .. e.id .. ": " .. e.sp)
+   if e.sp >= 8 then
+      add(to_kill, e)
+   else
+      if (t%3) == 0 then
+       e.sp = e.sp + 1
+      end
+   end
+  end
+  for e in all(to_kill) do
+   del(dead_enemies, e)
+  end
+end
+
+
+function _update()
+ t += 1
+ animate(ship)
+
+ replenish()
+ for b in all(bullets) do
+  moveobj(b)
+  if not in_bound(b, bound) then
+   del(bullets, b)
+  end
+  local newly_died = collide_any(b, enemies)
+  if next(newly_died) == nil then
+  else
+   for de in all(newly_died) do
+    sfx(2)
+    score.good += 1
+    del(enemies, de)
+    del(bullets, b)
+   end
+  end
+  merge(dead_enemies, newly_died)
+ end
+
+ continue_exploding()
+
+ for e in all(enemies) do
+  moveobj(e)
+  if not in_bound(e, bound) then
+    score.bad += 1
+    del(enemies, e)
+  end
+ end
+
+-- printh("enemies: " .. showids(enemies))
+-- printh("dying enemies: " .. showids(dead_enemies))
+
+ -- buttons
+ if btn(⬆️) then ship.y-=1 end
+ if btn(⬇️) then ship.y+=1 end
+ if btn(⬅️) then ship.x-=1 end
+ if btn(➡️) then ship.x+=1 end
+ constrain(ship, bound)
+
+ if btn(🅾️) then fire(0) end
+ if btn(❎) then fire(1) end
+end
+
+function _draw()
+ cls()
+ print(score.good or 0, 40, 120, 6)
+ print(score.bad  or 0, 60, 120, 8)
+ print(ammos[0].n .. "/" .. ammos[0].mx, 0,120, 7)
+ print(ammos[1].n .. "/" .. ammos[1].mx, 90,120, 7)
+ spr(ship.sp, ship.x, ship.y)
+ for b in all(bullets) do
+  spr(b.sp, b.x, b.y)
+ end
+ for e in all(enemies) do
+  spr(e.sp, e.x, e.y)
+ end
+ for de in all(dead_enemies) do
+  spr(de.sp, de.x, de.y)
+ end
+
+end
+-->8
+-- PAGE 1
 -- a = 0 or 1
 function fire(k)
  if (k < 0 or k > 1 or ammos[k].n <= 0) then return end
@@ -93,7 +200,6 @@ function fire(k)
  add(bullets, b)
  sfx(b.sx, a)
 end
-
 -- utils
 function copy(a)
  local n = {}
@@ -141,29 +247,6 @@ function rndi(n)
  return flr(rnd(n))
 end
 
--- /utils
-
-function replenish()
- create_enemy()
-
- -- replenish ammo
- for k,a in pairs(ammos) do
---  local a = ammos[k]
-  if ((t % a.dr) == 0 and a.n < a.mx) then
-    a.n += 1
-  end
- end
-end
-
-
-function create_enemy()
- if ((t % info.tie.dr) == 0) then
-  e = spawn("tie", { x=rndi(100), y=0 })
-  --  printh(t.. " spawned: " .. e.x .. " " .. " " .. e.y .." " ..  e.dx .. " ".. e.dy)
-  add(enemies, e)
- end
-end
-
 function collide(a, b)
  if (a.x + a.box.x1 > b.x + b.box.x2 or
      a.y + a.box.y1 > b.y + b.box.y2 or
@@ -178,99 +261,24 @@ end
 function collide_any(obj, objects)
  local collisions = {}
  for o in all(objects) do
-  -- printh("checking collision of " .. obj.w .. " with " .. o.type .. ":" .. o.w)
   if (collide(obj, o)) then add(collisions, o) end
  end
  return collisions
 end
 
-function explode(de)
- -- sfx(2)
+-- /utils
+
+-->8
+-- PAGE 2
+function showids(tbl)
+ local str = ""
+ for k,v in pairs(tbl) do
+  if (type(v) == 'table') then v = v.id end
+  str = str .. v .. ", "
+ end
+ return str
 end
 
-
-function continue_exploding()
-  local to_kill = {}
-  -- printh("dead_enemies (u):" .. #dead_enemies)
-  for e in all(dead_enemies) do
-   printh(t .. "|" .. e.id .. ": " .. e.sp)
-   if e.sp >= 8 then
-      add(to_kill, e)
-   else
-      if (t%3) == 0 then
-       e.sp = e.sp + 1
-      end
-   end
-  end
-  for e in all(to_kill) do
-   del(dead_enemies, e)
-  end
-end
-
-
-function _update()
- t += 1
- animate(ship)
-
- replenish()
- for b in all(bullets) do
-  moveobj(b)
-  if not in_bound(b, bound) then
-   del(bullets, b)
-  end
-  local newly_died = collide_any(b, enemies)
-  if next(newly_died) == nil then
-  else
-   for de in all(newly_died) do
-    -- explode(de)
-    score.good += 1
-    del(enemies, de)
-   end
-  end
-  merge(dead_enemies, newly_died)
- end
-
- continue_exploding()
-
- for e in all(enemies) do
-  moveobj(e)
-  if not in_bound(e, bound) then
-    score.bad += 1
-    del(enemies, e)
-  end
- end
-
- -- buttons
- if btn(⬆️) then ship.y-=1 end
- if btn(⬇️) then ship.y+=1 end
- if btn(⬅️) then ship.x-=1 end
- if btn(➡️) then ship.x+=1 end
- constrain(ship, bound)
-
- if btn(🅾️) then fire(0) end
- if btn(❎) then fire(1) end
-end
-
-function _draw()
- cls()
- print(score.good or 0, 40, 120, 6)
- print(score.bad  or 0, 60, 120, 8)
- print(ammos[0].n .. "/" .. ammos[0].mx, 0,120, 7)
- print(ammos[1].n .. "/" .. ammos[1].mx, 90,120, 7)
- spr(ship.sp, ship.x, ship.y)
- for b in all(bullets) do
-  spr(b.sp, b.x, b.y)
- end
- for e in all(enemies) do
-  spr(e.sp, e.x, e.y)
- end
- -- printh("dead_enemies: (d):" .. #dead_enemies)
- for de in all(dead_enemies) do
-  printh(t .. "| => " .. e.id .. ": " .. e.sp)
-  spr(e.sp, e.x, e.y)
- end
-
-end
 __gfx__
 00000000000060000000600050000005500000a5a8800005080a08a00a0000000000000000000000000000000000000000000000000000000000000000000000
 0000000000006000000060005555555555a9a9aa9a9a55559a9a889a000a09000000000000000000000000000000000000000000000000000000000000000000
