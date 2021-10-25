@@ -28,7 +28,7 @@ function _init()
   ghost = {
    sp = 2,
    box = {x1=0, y1=0, x2=8, y2=8},
-   dr = 50,
+   dr = 30,
    dx = -1,
    dy = 0,
    csfx = 0,
@@ -77,7 +77,7 @@ end
 
 function _update()
  t += 1
- maybe_spawn(template.ghost, {x=(rndi(80) + 20), y=(rndi(100) + 10), dx=(-rnd(2))})
+ maybe_spawn(template.ghost, {x=(rndi(80) + 20), y=(rndi(100) + 10), dx=(-0.2 - rnd(2))})
  maybe_spawn(template.witch, {x=110, y=(rndi(100) + 10)})
  for monster in all(monsters) do
   move_sprite(monster)
@@ -108,16 +108,16 @@ end
 
 function controls()
  if btn(⬆️) and player.y > player.boundary.y1 then
-  player.y = player.y - 1
+  player.y = player.y - 2
  end
  if btn(⬇️) and player.y < player.boundary.y2 then
-  player.y = player.y + 1
+  player.y = player.y + 2
  end
  if btn(⬅️) and player.x > player.boundary.x1 then
-  player.x = player.x - 1
+  player.x = player.x - 2
  end
  if btn(➡️) and player.x < player.boundary.x2 then
-  player.x = player.x + 1
+  player.x = player.x + 2
  end
 end
 
