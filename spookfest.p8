@@ -16,6 +16,7 @@ function _init()
   sp=6,
   sw=2,
   sh=2,
+  box = {x1=4, y1=3, x2=13, y2=16},
   boundary = {
   x1=0,
   y1=0,
@@ -26,21 +27,44 @@ function _init()
  template = {
   ghost = {
    sp = 2,
+   box = {x1=0, y1=0, x2=8, y2=8},
    dr = 50,
    dx = -1,
    dy = 0,
+   csfx = 0,
   },
   witch = {
    name = "witch",
    sp = 3,
    sw = 2,
    sh = 2,
+   box = {x1=0, y1=0, x2=16, y2=16},
    dr = 90,
    dx = -1,
    dy = 0,
+   csfx = 1,
   }
  }
  monsters = {}
+end
+
+function did_collide(a,b)
+ if (a.x + a.box.x1 > b.x + b.box.x2 or
+     a.y + a.box.y1 > b.y + b.box.y2 or
+     b.x + b.box.x1 > a.x + a.box.x2 or
+     b.y + b.box.y1 > a.y + a.box.y2) then
+  return false
+ else
+  return true
+ end
+end
+
+function collide_any(obj, objects)
+ local collisions = {}
+ for o in all(objects) do
+  if (did_collide(obj, o)) then add(collisions, o) end
+ end
+ return collisions
 end
 
 function maybe_spawn(template, extra)
@@ -59,8 +83,17 @@ function _update()
   move_sprite(monster)
   if (monster.x < boundary.x1 or monster.x > boundary.x2 or
       monster.y < boundary.y1 or monster.y > boundary.y2) then
-    printh("monster out of bounds: " .. dump(monster))
+    -- printh("monster out of bounds: " .. dump(monster))
     del(monsters, monster)
+  end
+ end
+ local new_collisions = collide_any(player, monsters)
+ if next(new_collisions) == nil then
+  -- no collisions, no problem
+ else
+  for collision in all(new_collisions) do
+   sfx(collision.csfx)
+   del(monsters, collision)
   end
  end
  controls()
