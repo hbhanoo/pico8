@@ -4,6 +4,10 @@ __lua__
 function _init()
  cls()
  t=0
+ boundary = {
+ x1 = 0, y1 = 0,
+ x2 = 120, y2 = 120,
+ }
  player = {
   x=60,
   y=60,
@@ -40,7 +44,7 @@ end
 function maybe_spawn(template, extra)
  if ((t % template.dr) == 0) then
   e = spawn(template, extra)
-  printh("drawing thing at " .. dump(e))
+  --  printh("drawing thing at " .. dump(e))
   add(monsters, e)
  end
 end
@@ -51,13 +55,18 @@ function _update()
  maybe_spawn(template.witch, {x=110, y=(rndi(100) + 10)})
  for monster in all(monsters) do
   move_sprite(monster)
+  if (monster.x < boundary.x1 or monster.x > boundary.x2 or
+      monster.y < boundary.y1 or monster.y > boundary.y2) then
+    -- printh("monster out of bounds: " .. dump(monster))
+    del(monsters, monster)
+  end
  end
  controls()
 end
 
 function spawn(template, extra)
  local e = copy(template)
- printh("merging " .. dump(extra) .. " into " .. dump(e))
+ -- printh("merging " .. dump(extra) .. " into " .. dump(e))
  merge(e, extra)
  return e
 end
